@@ -1,0 +1,35 @@
+name: Verify Hublivo source archive
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      NODE_IMAGE: node:26.13.1-bookworm@sha256:893ea48106e988a5f91e69629d6472600daa9d0494adf7db87eb0b886ce82255
+    steps:
+      - name: Verify archive and install locked dependencies
+        run: |
+          curl --fail --silent --show-error --location https://github.com/Salama1429/hublivo-source/releases/download/5f9bd96/hublivo-corresponding-source-5f9bd96.zip --output "$RUNNER_TEMP/source.zip"
+          echo '70e24d9cb0f35646876db0aaa5cf815c4afd1d6971613f68cb8afc0ee6fc8d75  source.zip' | (cd "$RUNNER_TEMP" && sha256sum --check)
+          unzip -q "$RUNNER_TEMP/source.zip" -d "$RUNNER_TEMP"
+          echo 'Source commit 5f9bd9606a7874c381468a06973869c379250e1d'
+          docker pull "$NODE_IMAGE"
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$RUNNER_TEMP/hublivo:/work" -w /work "$NODE_IMAGE" npm ci --no-audit --no-fund
+      - name: Validate with external networking disabled
+        run: |
+          docker run --network none --rm --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp -e CI=true -e NEXT_TELEMETRY_DISABLED=1 \
+            -v "$RUNNER_TEMP/hublivo:/work" -w /work "$NODE_IMAGE" sh -eu -c '
+              node -e "if (Object.values(require(\"node:os\").networkInterfaces()).flat().some(i => !i.internal)) process.exit(1)"
+              npm run build:sdk
+              npm run lint
+              node --import ./tests/setup/register.mjs --test --test-concurrency=1 tests/html-blocks.test.mjs tests/slow-inputs.test.mjs tests/clean-html.test.mjs tests/archive-content.test.mjs tests/callouts.test.mjs
+              npm test
+              HUBLIVO_LOCAL_ACCEPTANCE=true npm run build:local
+              npm run build:assistant
+              npm run check:assistant:eve
+              HUB_ASSISTANT_ENGINE=eve HUBLIVO_LOCAL_ACCEPTANCE=true npm run build:local
+            '
