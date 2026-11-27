@@ -11,10 +11,10 @@ jobs:
     steps:
       - name: Verify archive and install locked dependencies
         run: |
-          curl --fail --silent --show-error --location https://github.com/Salama1429/hublivo-source/releases/download/5f9bd96/hublivo-corresponding-source-5f9bd96.zip --output "$RUNNER_TEMP/source.zip"
-          echo '70e24d9cb0f35646876db0aaa5cf815c4afd1d6971613f68cb8afc0ee6fc8d75  source.zip' | (cd "$RUNNER_TEMP" && sha256sum --check)
+          curl --fail --silent --show-error --location https://github.com/Salama1429/hublivo-source/releases/download/22a5aa3/hublivo-corresponding-source-22a5aa3.zip --output "$RUNNER_TEMP/source.zip"
+          echo 'b5ace3ab12001e278ccd2dbd5054dbe304134ea7079b3f2def3bb3d486000504  source.zip' | (cd "$RUNNER_TEMP" && sha256sum --check)
           unzip -q "$RUNNER_TEMP/source.zip" -d "$RUNNER_TEMP"
-          echo 'Source commit 5f9bd9606a7874c381468a06973869c379250e1d'
+          echo 'Source commit 22a5aa39cd5154bb6a26fef5d8656d46b4389d9e'
           docker pull "$NODE_IMAGE"
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
             -v "$RUNNER_TEMP/hublivo:/work" -w /work "$NODE_IMAGE" npm ci --no-audit --no-fund
